@@ -15,27 +15,41 @@ export default function Login() {
     password: ""
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // MOCK LOGIN: Simulate a backend check
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // 1. Hit your real FastAPI backend
+      const response = await fetch("http://127.0.0.1:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-      // Simple mock logic: accept any login for now
-      if (formData.email && formData.password) {
-        const mockUser = { email: formData.email, name: "Student", id: "123" };
-        localStorage.setItem("token", "fake-jwt-token-for-now");
-        localStorage.setItem("user", JSON.stringify(mockUser));
+      const data = await response.json();
 
-        console.log("Mock login successful!");
-        navigate("/dashboard");
-      } else {
-        setError("Invalid email or password");
+      if (!response.ok) {
+        throw new Error(data.detail || "Invalid credentials");
       }
-    }, 1200);
+
+      // 2. Save the real token from your backend
+      localStorage.setItem("token", data.access_token); // Check Swagger for exact token key
+      localStorage.setItem("user", JSON.stringify({ email: formData.email, name: "Candidate" }));
+
+      console.log("Real backend login successful!");
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
